@@ -1,0 +1,113 @@
+FUNCTION load_movies()
+ D ← read data from "movies.csv"
+    IF D is empty THEN
+        RETURN empty
+    ENDIF
+
+    FOR each movie m in D DO
+        FOR each feature f in {title, genres, cast, director, keywords} DO
+            Compute TF-IDF weight for f
+        ENDFOR
+        m.metadata ← combine all features using their TF-IDF weights
+    ENDFOR
+
+    RETURN D
+END FUNCTION
+
+
+FUNCTION create_training_pairs(D)
+    P_positive ← empty set
+    P_negative ← empty set
+
+    FOR i from 1 to 500 DO
+        (m1, m2) ← most similar movies based on cosine similarity
+        Add (m1, m2, 1) to P_positive
+    ENDFOR
+
+    FOR i from 1 to 500 DO
+        (m1, m2) ← least similar movies
+        Add (m1, m2, 0) to P_negative
+    ENDFOR
+
+    RETURN P = (P_positive, P_negative)
+END FUNCTION
+
+
+FUNCTION train_models(P)
+    Models ← empty set
+
+    FOR each model_type in {MiniLM, GTR-T5, BERT} DO
+        Train model to minimize contrastive loss using P
+        Add trained model to Models
+    ENDFOR
+
+    RETURN Models
+END FUNCTION
+
+
+FUNCTION generate_embeddings(D, Models)
+    FOR each movie m in D DO
+        FOR each model in Models DO
+            m.embedding[model] ← model output on m.metadata
+        ENDFOR
+    ENDFOR
+
+    RETURN D with embeddings
+END FUNCTION
+
+
+FUNCTION cluster_movies(D_with_embeddings)
+    FOR each movie m DO
+        Use GTR-T5 embedding to compute hash value
+    ENDFOR
+
+    Group movies with same hash into clusters
+
+    RETURN clusters
+END FUNCTION
+
+FUNCTION recommend_movies(clusters, query)
+    IF query not found in dataset THEN
+        RETURN empty
+    ENDIF
+
+    Find the most relevant cluster to the query based on cosine similarity
+    Select top 5 similar movies from that cluster
+
+    RETURN recommended movies
+END FUNCTION
+
+
+FUNCTION evaluate(clusters)
+    precision ← 0
+    recall ← 0
+
+    FOR each (query, true_results) in test_set DO
+        recommended ← recommend_movies(clusters, query)
+        precision ← precision + (# correct in recommended) / (total recommended)
+        recall ← recall + (# correct in recommended) / (total relevant)
+    ENDFOR
+
+    RETURN average precision and recall
+END FUNCTION
+
+
+FUNCTION explain_recommendations(D_with_embeddings, query)
+    recommendations ← recommend_movies(cluster_movies(D_with_embeddings), query)
+
+    Create prompt using movie titles and short plots
+    explanation ← FLAN-T5 generates text from prompt
+    RETURN explanation
+END FUNCTION
+// Main Program
+D ← load_movies()
+P ← create_training_pairs(D)
+Models ← train_models(P)
+D_with_embeddings ← generate_embeddings(D, Models)
+Clusters ← cluster_movies(D_with_embeddings)
+query ← get user input
+Recommendations ← recommend_movies(Clusters, query)
+IF Recommendations are not empty THEN
+    (precision, recall) ← evaluate(Clusters)
+    Explanation ← explain_recommendations(D_with_embeddings, query)
+ENDIF
